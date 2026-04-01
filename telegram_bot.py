@@ -446,6 +446,12 @@ async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    if is_admin(target_id):
+        await update.message.reply_text(
+            "<b>🚫 Нельзя банить администраторов 🏴‍☠️</b>", parse_mode="HTML"
+        )
+        return
+
     cursor.execute("UPDATE users SET banned=1 WHERE user_id=?", (target_id,))
     conn.commit()
 
@@ -460,6 +466,43 @@ async def cmd_ban(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"<b>✅ Пользователь {target_username} забанен 🏴‍☠️</b>", parse_mode="HTML"
+    )
+
+
+async def cmd_unban(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Админ: /unban @username — разбанить пользователя"""
+    if not is_admin(update.effective_user.id):
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "<b>Использование: /unban @юзер 🏴‍☠️</b>", parse_mode="HTML"
+        )
+        return
+
+    target_username = context.args[0]
+    target_id = get_user_id_by_username(target_username)
+
+    if not target_id:
+        await update.message.reply_text(
+            f"<b>Пользователь {target_username} не найден в базе 🏴‍☠️</b>", parse_mode="HTML"
+        )
+        return
+
+    cursor.execute("UPDATE users SET banned=0 WHERE user_id=?", (target_id,))
+    conn.commit()
+
+    try:
+        await context.bot.send_message(
+            target_id,
+            "<b>✅ Ты разблокирован в боте 🏴‍☠️</b>",
+            parse_mode="HTML"
+        )
+    except Exception:
+        pass
+
+    await update.message.reply_text(
+        f"<b>✅ Пользователь {target_username} разбанен 🏴‍☠️</b>", parse_mode="HTML"
     )
 
 
@@ -606,6 +649,7 @@ def main():
     app.add_handler(CommandHandler("textTOP", cmd_text_top))
     app.add_handler(CommandHandler("set1000", cmd_set1000))
     app.add_handler(CommandHandler("ban", cmd_ban))
+    app.add_handler(CommandHandler("unban", cmd_unban))
     app.add_handler(CallbackQueryHandler(buttons))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
     print("Бот запущен 🏴‍☠️")
